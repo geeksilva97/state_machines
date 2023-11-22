@@ -10,7 +10,6 @@
 -export([callback_mode/0, init/1, terminate/3]).
 -export([
          reading/3,
-         done/3,
          initial/3,
          error_state/3
         ]).
@@ -50,20 +49,16 @@ initial(cast, { put_package, header }, Data) ->
   { next_state, reading, Data + 1 };
 initial(cast, _, Data) ->
   io:format("Could not pass to another state from initial~n~n"),
-  { next_state, error_state, Data + 1 }.
+  { stop, normal, Data + 1 }.
 
 reading(cast, { put_package, data }, Data) ->
   {next_state, reading, Data + 1};
 reading(cast, { put_package, trailer }, Data) ->
   io:format("finishing~n~n"),
-  {next_state, done, Data + 1};
+  {stop, normal, Data + 1};
 reading(EventType, EventContent, Data) ->
   io:format("Current state: reading -- directing to handle common events~n"),
   handle_event(EventType, EventContent, Data).
-
-done(_, _, Data) ->
-  io:format("we are done!~n"),
-  {stop, normal, Data}.
 
 error_state(_, _, Data) ->
   {stop, error}.
@@ -80,7 +75,7 @@ handle_event({call,From}, get_state, Data) ->
 
 handle_event(cast, _, Data) ->
   io:format("Calling common event from cast~n", []),
-  {stop, error};
+  {stop, normal};
 
 handle_event(_, _, Data) ->
     io:format("Calling common event: ~p ~n", [Data]),
