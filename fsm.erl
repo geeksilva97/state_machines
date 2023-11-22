@@ -51,9 +51,6 @@ init([]) ->
 initial(cast, { put_package, header }, Data) ->
   { next_state, reading, Data + 1 };
 ?HANDLE_COMMON.
-% initial(cast, _, Data) ->
-%   io:format("Could not pass to another state from initial~n~n"),
-%   { stop, normal, Data + 1 }.
 
 reading(cast, { put_package, data }, Data) ->
   {next_state, reading, Data + 1};
@@ -61,14 +58,10 @@ reading(cast, { put_package, trailer }, Data) ->
   io:format("finishing~n~n"),
   {stop, normal, Data + 1};
 ?HANDLE_COMMON.
-% reading(EventType, EventContent, Data) ->
-%   io:format("Current state: reading -- directing to handle common events~n"),
-%   handle_event(EventType, EventContent, Data).
 
 terminate(Reason, State, Data) ->
   io:format("Terminating - reason=~p; state=~p; data=~p~n~n", [Reason, State, Data]),
   void.
-
 
 handle_common(cast, EventContent, State, Data) ->
   io:format("handle_common for cast -- content=~p; state=~p; data=~p~n~n", [EventContent, State, Data]),
