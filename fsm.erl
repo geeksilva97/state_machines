@@ -10,9 +10,10 @@
 -export([callback_mode/0, init/1, terminate/3]).
 -export([
          reading/3,
-         initial/3,
-         error_state/3
+         initial/3
         ]).
+
+-define(HANDLE_COMMON, ?FUNCTION_NAME(T, C, D) -> handle_common(T, C, ?FUNCTION_NAME, D)).
 
 start() ->
   gen_statem:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -31,6 +32,8 @@ simulate() ->
   Result = get_state(),
   io:format("Result: ~p~n~n", [Result]),
   timer:sleep(500),
+  gen_statem:cast(?MODULE, {put_package, unexpected_info}),
+  timer:sleep(500),
   gen_statem:cast(?MODULE, {put_package, trailer}),
   timer:sleep(500),
   gen_statem:cast(?MODULE, {put_package, wtf}),
@@ -47,25 +50,35 @@ init([]) ->
 
 initial(cast, { put_package, header }, Data) ->
   { next_state, reading, Data + 1 };
-initial(cast, _, Data) ->
-  io:format("Could not pass to another state from initial~n~n"),
-  { stop, normal, Data + 1 }.
+?HANDLE_COMMON.
+% initial(cast, _, Data) ->
+%   io:format("Could not pass to another state from initial~n~n"),
+%   { stop, normal, Data + 1 }.
 
 reading(cast, { put_package, data }, Data) ->
   {next_state, reading, Data + 1};
 reading(cast, { put_package, trailer }, Data) ->
   io:format("finishing~n~n"),
   {stop, normal, Data + 1};
-reading(EventType, EventContent, Data) ->
-  io:format("Current state: reading -- directing to handle common events~n"),
-  handle_event(EventType, EventContent, Data).
-
-error_state(_, _, Data) ->
-  {stop, error}.
+?HANDLE_COMMON.
+% reading(EventType, EventContent, Data) ->
+%   io:format("Current state: reading -- directing to handle common events~n"),
+%   handle_event(EventType, EventContent, Data).
 
 terminate(Reason, State, Data) ->
   io:format("Terminating - reason=~p; state=~p; data=~p~n~n", [Reason, State, Data]),
   void.
+
+
+handle_common(cast, EventContent, State, Data) ->
+  io:format("handle_common for cast -- content=~p; state=~p; data=~p~n~n", [EventContent, State, Data]),
+  keep_state_and_data;
+handle_common({call, From}, EventContent, State, Data) ->
+  io:format("handle_common for call -- content=~p; state=~p; data=~p~n~n", [EventContent, State, Data]),
+    {keep_state_and_data,
+    { reply, From, Data }};
+handle_common(_, _, _, _) ->
+  {stop, error}.
 
 %% Handle events common to all states
 handle_event({call,From}, get_state, Data) ->
